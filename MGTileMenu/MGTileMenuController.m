@@ -339,8 +339,24 @@ CGGradientRef MGCreateGradientWithColors(UIColor *topColorRGB, UIColor *bottomCo
 	CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
 	CGFloat locations[2] = {0, 1};
 	CGFloat topRed, topGreen, topBlue, topAlpha, bottomRed, bottomGreen, bottomBlue, bottomAlpha;
-	[topColorRGB getRed:&topRed green:&topGreen blue:&topBlue alpha:&topAlpha];
-	[bottomColorRGB getRed:&bottomRed green:&bottomGreen blue:&bottomBlue alpha:&bottomAlpha];
+	// if iOS version >= 5.0
+	if ([topColorRGB respondsToSelector:@selector(getRed:green:blue:alpha:)])
+	{
+		[topColorRGB getRed:&topRed green:&topGreen blue:&topBlue alpha:&topAlpha];
+		[bottomColorRGB getRed:&bottomRed green:&bottomGreen blue:&bottomBlue alpha:&bottomAlpha];
+	} else // if iOS version < 5.0
+	{
+		const CGFloat* components = CGColorGetComponents([topColorRGB CGColor]);
+		topRed = components[0];
+		topGreen = components[1];
+		topBlue = components[2];
+		topAlpha = CGColorGetAlpha([topColorRGB CGColor]);
+		components = CGColorGetComponents([bottomColorRGB CGColor]);
+		bottomRed = components[0];
+		bottomGreen = components[1];
+		bottomBlue = components[2];
+		bottomAlpha = CGColorGetAlpha([bottomColorRGB CGColor]);
+	}
 	CGFloat gradientColors[] =
 	{
 		topRed, topGreen, topBlue, topAlpha, 
@@ -504,7 +520,7 @@ CGGradientRef MGCreateGradientWithColors(UIColor *topColorRGB, UIColor *bottomCo
 	// 'Stroke' path with gradient if highlighted.
 	if (highlighted) {
 		// Obtain path for a border around roundedPath, of twice the selectionBorderWidth.
-		CGPathRef borderPath = CGPathCreateCopyByStrokingPath(roundedPath.CGPath, NULL, 
+		CGPathRef borderPath = CGPathCreateCopyByStrokingPathAllVersionsOfIOS(roundedPath.CGPath, CGSizeMake(1,1), NULL,
 															  (_selectionBorderWidth * 2.0), 
 															  roundedPath.lineCapStyle, 
 															  roundedPath.lineJoinStyle, 
@@ -528,6 +544,38 @@ CGGradientRef MGCreateGradientWithColors(UIColor *topColorRGB, UIColor *bottomCo
 	return tileImage;
 }
 
+
+static inline CGPathRef CGPathCreateCopyByStrokingPathAllVersionsOfIOS( CGPathRef
+																	   incomingPathRef, CGSize pathFrameRange, const CGAffineTransform* transform,
+																	   CGFloat lineWidth, CGLineCap lineCap, CGLineJoin lineJoin, CGFloat miterLimit )
+{
+    CGPathRef result;
+	
+    if( CGPathCreateCopyByStrokingPath != NULL )
+    {
+        /**
+		 REQUIRES IOS5!!!
+         */
+        result = CGPathCreateCopyByStrokingPath( incomingPathRef, transform,
+												lineWidth, lineCap, lineJoin, miterLimit);
+    }
+    else
+    {
+        CGSize sizeOfContext = pathFrameRange;
+        UIGraphicsBeginImageContext( sizeOfContext );
+        CGContextRef c = UIGraphicsGetCurrentContext();
+        CGContextSetLineWidth(c, lineWidth);
+        CGContextSetLineCap(c, lineCap);
+        CGContextSetLineJoin(c, lineJoin);
+        CGContextSetMiterLimit(c, miterLimit);
+        CGContextAddPath(c, incomingPathRef);
+        CGContextSetLineWidth(c, lineWidth);
+        CGContextReplacePathWithStrokedPath(c);
+        result = CGContextCopyPath(c);
+        UIGraphicsEndImageContext();
+    }
+	return result;
+}
 
 - (void)tileActivated:(id)sender
 {
