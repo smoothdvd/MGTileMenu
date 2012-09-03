@@ -23,7 +23,7 @@
 }
 
 
-@property (nonatomic, weak, readonly) id<MGTileMenuDelegate> delegate; // must be specified via initializer method.
+@property (nonatomic, unsafe_unretained, readonly) id<MGTileMenuDelegate> delegate; // must be specified via initializer method.
 @property (nonatomic, readonly) CGPoint centerPoint; // in parent view's coordinate system. If menu not visible, will be CGPointZero
 @property (nonatomic, weak, readonly) UIView *parentView;
 @property (nonatomic, readonly) BOOL isVisible;

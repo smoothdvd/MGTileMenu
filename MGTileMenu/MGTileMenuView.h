@@ -11,6 +11,6 @@
 
 @interface MGTileMenuView : UIView
 
-@property (weak, nonatomic) MGTileMenuController *controller;
+@property (unsafe_unretained, nonatomic) MGTileMenuController *controller;
 
 @end
